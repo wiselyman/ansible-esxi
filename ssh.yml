@@ -1,0 +1,8 @@
+- hosts: nodes
+  tasks:
+    - name: Creates ssh directory
+      file: path=/root/.ssh state=directory
+
+    - name: Copy authorized_keys
+      template: src=/Users/wangyunfei/.ssh/id_rsa.pub dest=/root/.ssh/authorized_keys
+

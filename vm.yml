@@ -1,0 +1,88 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  user: root
+  sudo: false
+  gather_facts: false
+  serial: 1
+  tasks:
+    - name: Deploy guest from ISO
+      vsphere_guest:
+        vcenter_hostname: "{{ esx_ipaddr }}"
+        username: root
+        password: zzzzzzz
+        validate_certs: no
+        guest: "{{ item }}"
+        state: "{{ vm_state }}"
+        vm_extra_config:
+          vcpu.hotadd: yes
+          mem.hotadd:  yes
+          notes: This is a test VM
+        vm_disk:
+          disk1:
+            size_gb: "{{ disk_size }}"
+            type: thin
+            datastore: "{{ datastore_name }}"
+        vm_nic:
+          nic1:
+            type: vmxnet3
+            network: VM Network
+            network_type: standard
+        vm_hardware:
+          memory_mb: "{{ mem_size }}"
+          num_cpus: 2
+          osid: centos7_64Guest
+          scsi: paravirtual
+          vm_cdrom:
+            type: "iso"
+            iso_path: "{{ iso_path }}"
+        esxi:
+          datacenter: ha-datacenter
+          hostname: "{{ esx_hostname  }}"
+      with_items:
+        - "k-node1"
+        - "k-node2"
+
+
+    - name: Get Facts of vms
+      vsphere_guest:
+        vcenter_hostname: "{{ esx_ipaddr }}"
+        username: root
+        password: zzzzzzz
+        validate_certs: no
+        guest: "{{ item }}"
+        vmware_guest_facts: yes
+        esxi:
+          datacenter: ha-datacenter
+          hostname: "{{ esx_hostname  }}"
+      register: vmguest_facts
+      until: vmguest_facts.ansible_facts.hw_eth0.ipaddresses
+      retries: 30
+      delay: 10
+      with_items:
+        - "k-node1"
+        - "k-node2"
+ 
+    - name: Add the IP address of the VM to Memory Inventory
+      add_host:
+        hostname: "{{ item.ansible_facts.hw_eth0.ipaddresses[0] }}"
+        ansible_ssh_user: root
+        ansible_ssh_pass: zzzzzz
+        tag: "{{ item.ansible_facts.hw_name }}"
+      with_items: "{{ vmguest_facts.results }}"
+
+- hosts: all
+  tasks:
+    - name: changing IP of vms
+      template: src=templates/ifcfg-ens192.j2 dest=/etc/sysconfig/network-scripts/ifcfg-ens192
+
+    - name: Restart vms
+      become: yes
+      shell: sleep 2 && /sbin/shutdown -r now "Ansible system package upgraded"
+      async: 1
+      poll: 0
+
+
+
+
+

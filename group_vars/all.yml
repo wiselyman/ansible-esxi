@@ -1,0 +1,10 @@
+---
+esx_hostname: localhost.localdomain
+esx_ipaddr: 192.168.1.155 
+esx_user: root　
+esx_password: zzzzzzz
+datastore_name: HDD
+iso_path: HDD/ISO/CentOS-7-x86_64-DVD-1708_Wisely-dhcp.iso
+vm_state: powered_on
+disk_size: 100
+mem_size: 4096
